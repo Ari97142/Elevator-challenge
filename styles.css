@@ -1,0 +1,25 @@
+.building {
+    display: flex;
+    flex-direction: column-reverse; /* Reverse column direction to start from bottom */
+}
+
+.floor {
+    background-color: silver;
+    background-image: linear-gradient(335deg, #b00 23px, transparent 23px), 
+                      linear-gradient(155deg, #d00 23px, transparent 23px), 
+                      linear-gradient(335deg, #b00 23px, transparent 23px), 
+                      linear-gradient(155deg, #d00 23px, transparent 23px);
+    background-size: 58px 58px;
+    background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
+    width: 100px; 
+    height: auto;
+}
+
+.elevator-img {
+    position: absolute; /* Position the elevator image */
+    bottom: 0; /* Align to the bottom of the building */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Adjust horizontally to center */
+    width: 50px; /* Adjust width as needed */
+    height: auto; /* Maintain aspect ratio */
+}
