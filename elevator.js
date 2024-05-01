@@ -13,35 +13,24 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+/* The above TypeScript code defines classes for a building with multiple floors and elevators,
+allowing users to call the nearest elevator from a floor. */
 var Building = /** @class */ (function () {
     function Building(numFloors, numElevators) {
         this.numFloors = numFloors;
         this.numElevators = numElevators;
         this.floors = Array.from({ length: numFloors }, function (_, i) { return new Floor(i); });
-        this.elevators = Array.from({ length: numElevators }, function (_, i) {
-            if (i % 3 === 0) {
-                // Create a ninja elevator always waiting at the top floor
-                return new UpperElevator(i, numFloors - 1);
-            }
-            else if (i % 3 === 2) {
-                return new LowerElevator(i);
-            }
-            else {
-                return new MiddleElevator(i, (numFloors - 1) / 2);
-            }
-        });
-        this.elevatorImg = document.getElementById("elevator-img");
+        this.elevators = Array.from({ length: numElevators }, function (_, i) { return elevatorFactory.createElevator(i, numFloors); });
     }
     Building.prototype.displayBuilding = function () {
         var buildingElement = document.getElementById("building");
         var _loop_1 = function (floor) {
             var floorElement = document.createElement("div");
             floorElement.classList.add("floor");
-            // Create button element
             var button = document.createElement("button");
             button.innerText = "Floor ".concat(floor.number);
-            button.onclick = function () { return floor.callElevator(floor.number); }; // Call the elevator when button is clicked
-            floorElement.appendChild(button); // Add button to floor element
+            button.onclick = function () { return floor.callElevator(floor.number); };
+            floorElement.appendChild(button);
             buildingElement.appendChild(floorElement);
         };
         for (var _i = 0, _a = this.floors; _i < _a.length; _i++) {
@@ -54,9 +43,20 @@ var Building = /** @class */ (function () {
         var nearestElevator = this.elevators[0];
         for (var _i = 0, _a = this.elevators; _i < _a.length; _i++) {
             var elevator = _a[_i];
-            var totalFloors = Math.abs(elevator.currentFloor - floor);
-            var totalTime = elevator.destinationFloors.length * 2;
-            var distance = totalFloors + totalTime;
+            var TotalBreaks = elevator.destinationFloors.length * 2;
+            var distance = 0;
+            for (var i = 0; i < elevator.destinationFloors.length - 1; i++) {
+                var currentFloor = elevator.destinationFloors[i];
+                var nextFloor = elevator.destinationFloors[i + 1];
+                // calculate absolute distance between each pair of consecutive floors.
+                distance += Math.abs(currentFloor - nextFloor);
+                console.log("the distance between ".concat(currentFloor, " to  ").concat(nextFloor, " is ").concat(distance));
+            }
+            // console.log(`Elevator ${elevator.number} distance is  ${distance}`);
+            // calculate absolute distance between last destination floor to the calling floor.
+            distance += Math.abs(elevator.destinationFloors[elevator.destinationFloors.length - 1] - floor);
+            distance += TotalBreaks;
+            console.log("Elevator ".concat(elevator.number, " distance is  ").concat(distance));
             if (distance < minDistance) {
                 minDistance = distance;
                 nearestElevator = elevator;
@@ -78,10 +78,26 @@ var Floor = /** @class */ (function () {
     };
     return Floor;
 }());
+var elevatorFactory = /** @class */ (function () {
+    function elevatorFactory() {
+    }
+    elevatorFactory.createElevator = function (i, numFloors) {
+        if (i % 3 === 0) {
+            return new lowerElevator(i);
+        }
+        else if (i % 3 === 1) {
+            return new middleElevator(i, numFloors);
+        }
+        else {
+            return new upperElevator(i, numFloors);
+        }
+    };
+    return elevatorFactory;
+}());
 var Elevator = /** @class */ (function () {
     function Elevator(number) {
         this.number = number;
-        this.currentFloor = 0;
+        this.currentFloor = 0; // Initialize currentFloor to 0
         this.destinationFloors = [];
     }
     Elevator.prototype.moveLock = function () {
@@ -97,65 +113,63 @@ var Elevator = /** @class */ (function () {
             setTimeout(function () {
                 _this.currentFloor = nextFloor_1;
                 console.log("Elevator ".concat(_this.number, " arrived at floor ").concat(_this.currentFloor));
-                _this.destinationFloors.shift(); // Remove the arrived floor from the array
+                _this.destinationFloors.shift();
                 _this.moveLock();
-                // Move the elevator image to the corresponding floor
-                var buildingHeight = building.floors.length * 100; // Assuming each floor has a height of 100px
-                var floorHeight = buildingHeight / building.floors.length;
-                var elevatorPosition = (building.numFloors - nextFloor_1 - 1) * floorHeight;
-                building.elevatorImg.style.bottom = elevatorPosition + "px";
             }, floorsToMove * 1000);
         }
     };
     return Elevator;
 }());
-var LowerElevator = /** @class */ (function (_super) {
-    __extends(LowerElevator, _super);
-    function LowerElevator() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    LowerElevator.prototype.call = function (floor) {
-        this.destinationFloors.push(floor);
-        this.moveLock();
-    };
-    LowerElevator.prototype.getNextFloor = function () {
-        return this.destinationFloors[0];
-    };
-    return LowerElevator;
-}(Elevator));
-var UpperElevator = /** @class */ (function (_super) {
-    __extends(UpperElevator, _super);
-    function UpperElevator(number, currentFloor) {
+var lowerElevator = /** @class */ (function (_super) {
+    __extends(lowerElevator, _super);
+    function lowerElevator(number) {
         var _this = _super.call(this, number) || this;
-        _this.currentFloor = currentFloor;
+        _this.defaultPosition = 0; // Set default position for lowerElevator
+        _this.currentFloor = _this.defaultPosition; // Initialize currentFloor based on defaultPosition
         return _this;
     }
-    UpperElevator.prototype.call = function (floor) {
+    lowerElevator.prototype.call = function (floor) {
         this.destinationFloors.push(floor);
         this.moveLock();
     };
-    UpperElevator.prototype.getNextFloor = function () {
-        // Ninja elevator always waits at the top floor
+    lowerElevator.prototype.getNextFloor = function () {
         return this.destinationFloors[0];
     };
-    return UpperElevator;
+    return lowerElevator;
 }(Elevator));
-var MiddleElevator = /** @class */ (function (_super) {
-    __extends(MiddleElevator, _super);
-    function MiddleElevator(number, currentFloor) {
+var upperElevator = /** @class */ (function (_super) {
+    __extends(upperElevator, _super);
+    function upperElevator(number, numFloors) {
         var _this = _super.call(this, number) || this;
-        _this.currentFloor = currentFloor;
+        _this.defaultPosition = numFloors - 1;
+        _this.currentFloor = _this.defaultPosition; // Initialize currentFloor based on defaultPosition
         return _this;
     }
-    MiddleElevator.prototype.call = function (floor) {
+    upperElevator.prototype.call = function (floor) {
         this.destinationFloors.push(floor);
         this.moveLock();
     };
-    MiddleElevator.prototype.getNextFloor = function () {
-        // Middle elevator moves to the requested floor
+    upperElevator.prototype.getNextFloor = function () {
         return this.destinationFloors[0];
     };
-    return MiddleElevator;
+    return upperElevator;
+}(Elevator));
+var middleElevator = /** @class */ (function (_super) {
+    __extends(middleElevator, _super);
+    function middleElevator(number, numFloors) {
+        var _this = _super.call(this, number) || this;
+        _this.defaultPosition = Math.floor((numFloors - 1) / 2);
+        _this.currentFloor = _this.defaultPosition; // Initialize currentFloor based on defaultPosition
+        return _this;
+    }
+    middleElevator.prototype.call = function (floor) {
+        this.destinationFloors.push(floor);
+        this.moveLock();
+    };
+    middleElevator.prototype.getNextFloor = function () {
+        return this.destinationFloors[0];
+    };
+    return middleElevator;
 }(Elevator));
 var CallButton = /** @class */ (function () {
     function CallButton() {

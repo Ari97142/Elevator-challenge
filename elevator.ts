@@ -1,3 +1,5 @@
+/* The above TypeScript code defines classes for a building with multiple floors and elevators,
+allowing users to call the nearest elevator from a floor. */
 class Building {
     numFloors: number;
     numElevators: number;
@@ -10,16 +12,7 @@ class Building {
         this.numFloors = numFloors;
         this.numElevators = numElevators;
         this.floors = Array.from({ length: numFloors }, (_, i) => new Floor(i));
-        this.elevators = Array.from({ length: numElevators }, (_, i) => {
-            if (i % 3 === 0) {
-                // Create a separate elevators always waiting at the different floors. 
-                return new upperElevator(i, numFloors - 1);
-            } else if (i % 3 === 2) {
-                return new lowerElevator(i);
-            } else {
-                return new middleElevator(i, (numFloors - 1) / 2);
-            }
-        });
+        this.elevators = Array.from({ length: numElevators }, (_, i) => elevatorFactory.createElevator(i, numFloors));
     }
     
     displayBuilding() {
@@ -28,7 +21,7 @@ class Building {
             const floorElement = document.createElement("div");
             floorElement.classList.add("floor");
             
-            // Create button element
+    
             const button = document.createElement("button");
             button.innerText = `Floor ${floor.number}`;
             button.onclick = () => floor.callElevator(floor.number); 
@@ -42,9 +35,21 @@ class Building {
         let minDistance = Infinity;
         let nearestElevator: Elevator = this.elevators[0];
         for (const elevator of this.elevators) {
-            const totalFloors = Math.abs(elevator.currentFloor - floor);
-            const totalTime = elevator.destinationFloors.length * 2;
-            const distance = totalFloors + totalTime;
+            const TotalBreaks = elevator.destinationFloors.length * 2;
+    
+            let distance: number = 0; 
+            for (let i = 0; i < elevator.destinationFloors.length - 1; i++) { 
+                const currentFloor: number = elevator.destinationFloors[i];
+                const nextFloor: number = elevator.destinationFloors[i + 1];
+                // calculate absolute distance between each pair of consecutive floors.
+                distance += Math.abs(currentFloor - nextFloor);
+                console.log(`the distance between ${currentFloor} to  ${nextFloor} is ${distance}`);
+            }
+            // console.log(`Elevator ${elevator.number} distance is  ${distance}`);
+            // calculate absolute distance between last destination floor to the calling floor.
+            distance += Math.abs(elevator.destinationFloors[elevator.destinationFloors.length - 1] - floor); 
+            distance += TotalBreaks;
+            console.log(`Elevator ${elevator.number} distance is  ${distance}`);
             if (distance < minDistance) {
                 minDistance = distance;
                 nearestElevator = elevator;
@@ -52,6 +57,7 @@ class Building {
         }
         return nearestElevator;
     }
+    
 }
 
 class Floor {
@@ -70,6 +76,22 @@ class Floor {
     }
 }
 
+class elevatorFactory  {
+    static createElevator (i: number, numFloors: number){
+        if (i % 3 === 0) {
+            return new lowerElevator(i);
+        }
+        else if (i % 3 === 1) {
+            return new middleElevator(i, numFloors);
+        }
+        else {
+            return new upperElevator(i, numFloors);
+        }
+    }
+
+}
+
+
 abstract class Elevator {
     number: number;
     currentFloor: number;
@@ -77,7 +99,7 @@ abstract class Elevator {
 
     constructor(number: number) {
         this.number = number;
-        this.currentFloor = 0;
+        this.currentFloor = 0; // Initialize currentFloor to 0
         this.destinationFloors = [];
     }
 
@@ -91,35 +113,44 @@ abstract class Elevator {
                 return;
             }
             const floorsToMove = Math.abs(this.currentFloor - nextFloor);
-            console.log(this.destinationFloors)
+            console.log(this.destinationFloors);
             setTimeout(() => {
                 this.currentFloor = nextFloor;
                 console.log(`Elevator ${this.number} arrived at floor ${this.currentFloor}`);
-                this.destinationFloors.shift(); 
+                this.destinationFloors.shift();
                 this.moveLock();
             }, floorsToMove * 1000);
         }
     }
-    
+
     protected abstract getNextFloor(): number;
 }
 
 class lowerElevator extends Elevator {
+    defaultPosition: number = 0;
+
+    constructor(number: number) {
+        super(number);
+        this.currentFloor = this.defaultPosition; 
+    }
+
     call(floor: number) {
         this.destinationFloors.push(floor);
         this.moveLock();
     }
 
     protected getNextFloor(): number {
-        
         return this.destinationFloors[0];
     }
 }
 
 class upperElevator extends Elevator {
-    constructor(number: number, currentFloor: number) {
+    defaultPosition: number;
+
+    constructor(number: number, numFloors: number) {
         super(number);
-        this.currentFloor = currentFloor;
+        this.defaultPosition = numFloors - 1;
+        this.currentFloor = this.defaultPosition; 
     }
 
     call(floor: number) {
@@ -128,15 +159,17 @@ class upperElevator extends Elevator {
     }
 
     protected getNextFloor(): number {
-        // Ninja elevator always waits at the top floor
         return this.destinationFloors[0];
     }
 }
 
 class middleElevator extends Elevator {
-    constructor(number: number, currentFloor: number) {
+    defaultPosition: number;
+
+    constructor(number: number, numFloors: number) {
         super(number);
-        this.currentFloor = currentFloor;
+        this.defaultPosition = Math.floor((numFloors - 1) / 2);
+        this.currentFloor = this.defaultPosition; 
     }
 
     call(floor: number) {
@@ -145,10 +178,10 @@ class middleElevator extends Elevator {
     }
 
     protected getNextFloor(): number {
-        
         return this.destinationFloors[0];
     }
 }
+
 
 class CallButton {
     color: string;
