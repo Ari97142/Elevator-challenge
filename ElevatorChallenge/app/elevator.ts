@@ -3,7 +3,6 @@ class Building {
     numElevators: number;
     floors: Floor[];
     elevators: Elevator[];
-    elevatorImg: HTMLImageElement;
 
     constructor(numFloors: number, numElevators: number) {
         this.numFloors = numFloors;
@@ -26,8 +25,10 @@ class Building {
             const floorElement = document.createElement("div");
             floorElement.classList.add("floor");
 
-            const {button} = floor.callButton;     
+            const {button} = floor.callButton;  
+            const {timerElement} = floor.timer;   
             floorElement.appendChild(button);
+            floorElement.appendChild(timerElement);
 
             floorsElement.appendChild(floorElement);
         }
@@ -36,34 +37,32 @@ class Building {
         buildingElement.appendChild(floorsElement);
 
         for (let i = 0; i < this.elevators.length; i++) {
-            const elevatorElement = document.createElement("img");
-            elevatorElement.classList.add("elevator-img");
-            elevatorElement.src = 'elv.png';
-            elevatorElement.id = `elevator-${i}`;
+            const elevatorElement = this.elevators[i].elevatorImg;
             elevatorElement.style.setProperty('--currentFloor', `${this.elevators[i].currentFloor}`);
+
             elevatorsRowElement.appendChild(elevatorElement);
         }
     }
 
-    findNearestElevator(callingFloor: number): Elevator {
+    findNearestElevator(callingFloor: Floor): Elevator {
         let minTime = Infinity;
         let nearestElevator: Elevator = this.elevators[2];
         for (const elevator of this.elevators) {
             let time: number = 0;
             // Calculate time to travel between all consecutive floors
             for (let i = 0; i < elevator.destinationFloors.length - 1; i++) {
-                const currentFloor: number = elevator.destinationFloors[i];
-                const nextFloor: number = elevator.destinationFloors[i + 1];
+                const currentFloor: number = elevator.destinationFloors[i].number;
+                const nextFloor: number = elevator.destinationFloors[i + 1].number;
                 time += Math.abs(currentFloor - nextFloor);
             }
             // Calculate time to travel from the last destination floor to the calling floor
             let lastFloor: number;
             if (elevator.destinationFloors.length > 0) {
-                lastFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1];
+                lastFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1].number;
             } else {
                 lastFloor = elevator.currentFloor; // If destinationFloors is empty, set lastFloor to currentFloor
             }
-            time += Math.abs(lastFloor - callingFloor)
+            time += Math.abs(lastFloor - callingFloor.number)
             // Calculate total all breaks time
             const totalBreaks = elevator.destinationFloors.length * 2;
             time += totalBreaks;
@@ -72,9 +71,9 @@ class Building {
                 nearestElevator = elevator;
             }
         }
-         // Create and start the timer
-         const timer = new Timer(callingFloor, minTime - 2); 
-         timer.startTimer();
+        // Create and start the timer
+        const {timer} = callingFloor;
+        timer.startTimer(minTime) ;
 
         return nearestElevator;
     }
@@ -83,18 +82,21 @@ class Building {
 class Floor {
     number: number;
     callButton: CallButton;
+    timer: Timer;
 
     constructor(number: number) {
         this.number = number;
         this.callButton = new CallButton(this);
+        this.timer = new Timer(this);
     }
 
     // Function to change the color of the button text when clicked
-    changeColor(button: HTMLButtonElement) {
+    changeColor() {
+        const {button} = this.callButton;
         if (button.style.color === 'green') {
             button.style.color = 'hsla(0, 0%, 15%, 0.8)';
         } else {
-            button.style.color = 'green'; // Change text color to green
+            button.style.color = 'green'; 
         }
     }
 
@@ -103,22 +105,21 @@ class Floor {
         audio.play();
     }
 
-    callElevator(floor: number) {
-    const elevator = building.findNearestElevator(floor);
-    if (this.anElevatorOnFloor(floor)) {
-        console.log(`An elevator is already present on floor ${floor}.`);
-    } else {
-        this.changeColor(this.callButton.button);
-        elevator.call(floor);
-        console.log(`Elevator ${elevator.number} called to floor ${floor}`);
-        
+    callElevator() {
+        const elevator = building.findNearestElevator(this);
+        if (this.anElevatorOnFloor()) {
+            console.log(`An elevator is already present on floor ${this.number}.`);
+        } else {
+            this.changeColor();
+            elevator.call(this);
+            console.log(`Elevator ${elevator.number} called to floor ${this.number}`);
+            
+        }
     }
-}
 
-
-    private anElevatorOnFloor(floor: number): boolean {
+    private anElevatorOnFloor(): boolean {
         for (const elevator of building.elevators) {
-            if (elevator.currentFloor === floor) {
+            if (elevator.currentFloor === this.number) {
                 return true; 
             }
         }
@@ -139,7 +140,7 @@ class CallButton {
         const button = document.createElement("button");
         button.innerText = `${this.number}`;
         button.onclick = () => {
-                floor.callElevator(floor.number);
+                floor.callElevator();
             };
         button.classList.add("metal", "linear");
         return button;
@@ -160,84 +161,90 @@ class elevatorFactory {
         }
     }
 }
-
 abstract class Elevator {
     number: number;
     currentFloor: number;
-    destinationFloors: number[];
+    destinationFloors: Floor[];
+    elevatorImg: HTMLImageElement;
 
     constructor(number: number) {
         this.number = number;
-        this.currentFloor = 0;
+         this.currentFloor = 7;
         this.destinationFloors = [];
+        this.elevatorImg = this.createElevatorImg();
     }
 
-    call(floor: number) {
+    call(floor: Floor) {
         this.destinationFloors.push(floor);
-        this.moveLock();
+        this.move();
     }
 
-    protected updateElevatorPosition() {
-        const elevatorElement = document.getElementById(`elevator-${this.number}`) as HTMLElement;
-        if (elevatorElement) {
-            const floorHeight = 47;
-            const topPosition = floorHeight * this.currentFloor;
-            elevatorElement.style.top = `${topPosition}px`;
-        }
+    private createElevatorImg() {
+        const elevatorElement = document.createElement("img");
+        elevatorElement.classList.add("elevator-img");
+        elevatorElement.src = 'elv.png';
+        elevatorElement.id = `elevator-${this.number}`;
+        return elevatorElement;
     }
 
-    protected moveLock() {
+    protected move() {
         if (this.destinationFloors.length > 0) {
-            const nextFloor = this.getNextFloor();
-            if (nextFloor === this.currentFloor) {
-                console.log("Elevator is already at the destination floor.");
+            const nextFloor = this.getNextFloor().number;
+    
+            if (this.currentFloor === nextFloor) {
+                console.log(`Elevator ${this.number} arrived at floor ${this.currentFloor}`);
+                // this.destinationFloors.shift();
+                // this.handleArrival();
+                // this.move();
                 return;
             }
-
+    
             const floorsToMove = Math.abs(this.currentFloor - nextFloor);
-            const transitionDuration = 0.5;
-
+            const transitionDuration = 0.5 * floorsToMove;
+    
+            const elevatorElement = this.elevatorImg;
+            elevatorElement.style.transition = `top ${transitionDuration}s ease`;
+            
             this.currentFloor = nextFloor;
             this.updateElevatorPosition();
-            console.log(`Elevator ${this.number} arrived at floor ${this.currentFloor}`);
-
-            const elevatorElement = document.getElementById(`elevator-${this.number}`) as HTMLElement;
-            elevatorElement.style.transition = `top ${floorsToMove * transitionDuration}s ease`;
-
+            
+            console.log(`Elevator ${this.number} moving to floor ${this.currentFloor}`);
+            
             setTimeout(() => {
                 this.destinationFloors.shift();
-                this.moveLock();
-            }, (floorsToMove * transitionDuration * 1000));
-            setTimeout(() => {
                 this.handleArrival();
-            }, 2000);
-
+                this.move();
+            }, transitionDuration * 1000);
         }
     }
+    
+    protected updateElevatorPosition() {
+        const elevatorElement = this.elevatorImg;
+        const floorHeight = 47;
+        const topPosition = floorHeight * this.currentFloor;
+        elevatorElement.style.top = `${topPosition}px`;
+    }
+    
 
-
-    private handleArrival() {
+    protected handleArrival() {
         const { currentFloor } = this;
         const floor = building.floors[currentFloor];
         if (floor) {
-            floor.changeColor(floor.callButton.button);
+            floor.changeColor();
             floor.playArrivalSound();
         }
     }
 
-    protected getNextFloor(): number {
+    protected getNextFloor(): Floor {
         return this.destinationFloors[0];
     }
 }
 
 class lowerElevator extends Elevator {
-    defaultPosition: number = 0;
 
     constructor(number: number) {
         super(number);
-       
-
-        this.currentFloor = this.defaultPosition;
+        this.currentFloor = 0;
     }
 }
 
@@ -246,8 +253,7 @@ class upperElevator extends Elevator {
 
     constructor(number: number, numFloors: number) {
         super(number);
-        this.defaultPosition = numFloors - 1;
-        this.currentFloor = this.defaultPosition;
+        this.currentFloor = numFloors - 1;
     }
 }
 
@@ -256,37 +262,48 @@ class middleElevator extends Elevator {
 
     constructor(number: number, numFloors: number) {
         super(number);
-        this.defaultPosition = Math.floor((numFloors - 1) / 2);
-        this.currentFloor = this.defaultPosition;
+        this.currentFloor = Math.floor((numFloors - 1) / 2);
     }
 }
+
 
 class Timer {
-    floor: number;
-    remainingTime: number;
+    number: number;
+    remainingTime: number | null;
     timerElement: HTMLElement;
 
-    constructor(floor: number, remainingTime: number) {
-        this.floor = floor;
-        this.remainingTime = remainingTime;
-        this.timerElement = document.createElement('div');
-        this.timerElement.id = `timer-${floor}`;
-        this.timerElement.classList.add('timer');
-        document.body.appendChild(this.timerElement);
+    constructor(floor: Floor) {
+        this.number = floor.number;
+        this.remainingTime = null;
+        this.timerElement = this.createTimer(floor);
     }
 
-    startTimer() {
-        const interval = setInterval(() => {
-            if (this.remainingTime <= 0) {
-                clearInterval(interval);
-                this.timerElement.innerText = 'Elevator arrived';
-            } else {
-                this.timerElement.innerText = `Time remaining: ${this.remainingTime} seconds`;
-                this.remainingTime--;
-            }
-        }, 1000);
+    createTimer(floor: Floor): HTMLElement {
+        const timerElement = document.createElement('div');
+        timerElement.id = `timer-${floor.number}`;
+        timerElement.classList.add('timer');
+        timerElement.style.display = 'none';
+        return timerElement;
+    }
+
+    startTimer(remainingTime: number) {
+        if (remainingTime > 0) {
+            this.remainingTime = remainingTime;
+            this.timerElement.style.display = 'block'; 
+
+            const interval = setInterval(() => {
+                if (this.remainingTime === null || this.remainingTime <= 0) {
+                    clearInterval(interval);
+                    this.timerElement.style.display = 'none'; 
+                } else {
+                    this.timerElement.innerText = `${this.remainingTime}`;
+                    this.remainingTime--;
+                }
+            }, 1000);
+        }
     }
 }
+
 
 
 const building = new Building(15, 3);

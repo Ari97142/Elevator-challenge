@@ -1,12 +1,9 @@
-/* Metal style from help.css */
 
 :root {
-    --elevator-width: 50px; 
+    --floor-width: 50px; 
   }
 
 .building {
-    background-color: hsl(108, 65%, 37%);
-    display:contents ;
     flex-direction: row-reverse; 
     width:  calc(350px + (var(--elevator-width)* var(--numElevators)));
     display: flex;
@@ -69,7 +66,6 @@
     transform: rotate(-65deg);
   }
   
-  /* Linear ------------------------- */
   .metal.linear {
     width: 35px;
     font-size: 2em;
@@ -82,8 +78,6 @@
     position: center;
     }
   
-  /* Oval ------------------------- */
-  
   .metal.linear.oval {
     margin-top: 100px;
     width: 70px;
@@ -93,15 +87,10 @@
     font: italic bold 3em/50px Georgia, "Times New Roman", Times, serif;
   }
   
-  /* active ------------------------- */
-  
   .metal:active {
     color:green;
   }
 
-  
-  
-/* Floor style */
 .floor {
     background-color: silver;
     background-image: linear-gradient(335deg, #b00 23px, transparent 23px),
@@ -112,33 +101,39 @@
     background-position: 0px 2px, 4px 35px, 29px 31px, 34px 6px;
     width: 150px;
     height: 40px;
-    position: left;
     border-bottom: 7px solid black;
+    flex-direction: row-reverse; 
     display: flex;
-    justify-content: center;
+    justify-content:space-around; 
 }
 
-/* Elevator image style */
+.floors {
+  flex-direction: column-reverse; 
+
+}
+
 .elevator-img {
     position: relative;
     top: calc((47px * var(--currentFloor)) ); /* Calculate the top position based on currentFloor */
-    width: var(--elevator-width);
+    width: var(--floor-width);
     height: auto;
     transition: top 0.5s ease; /* Add transition for smooth movement */
 }
 
 
 .elevators-row {
-    background-color: blueviolet;
-    align-items: center; /* Align items at the center vertically */
-    position: relative; /* Set position relative to allow absolute positioning of elevators */
+    align-items: center; 
+    position: relative; 
 }
 
 .timer {
-  display: inline-block; /* Ensure the timer element is displayed as a block */
-  background-color: #f0f0f0; /* Set the background color */
-  color: #333; /* Set the text color */
-  padding: 5px 10px; /* Add padding for spacing */
-  border-radius: 5px; /* Add rounded corners */
-  font-family: Arial, sans-serif; /* Specify the font family */
+  margin-left: auto;
+  width: 35px; 
+  height: 25px;
+  display:flex; 
+  background-color: #02061b; 
+  color: #d30606; 
+  padding: 5px 5px; 
+  border-radius: 5px; 
+  font-family: Arial, sans-serif; 
 }

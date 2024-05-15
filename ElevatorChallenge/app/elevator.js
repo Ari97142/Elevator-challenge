@@ -32,16 +32,15 @@ var Building = /** @class */ (function () {
             var floorElement = document.createElement("div");
             floorElement.classList.add("floor");
             var button = floor.callButton.button;
+            var timerElement = floor.timer.timerElement;
             floorElement.appendChild(button);
+            floorElement.appendChild(timerElement);
             floorsElement.appendChild(floorElement);
         }
         buildingElement.appendChild(elevatorsRowElement);
         buildingElement.appendChild(floorsElement);
         for (var i = 0; i < this.elevators.length; i++) {
-            var elevatorElement = document.createElement("img");
-            elevatorElement.classList.add("elevator-img");
-            elevatorElement.src = 'elv.png';
-            elevatorElement.id = "elevator-".concat(i);
+            var elevatorElement = this.elevators[i].elevatorImg;
             elevatorElement.style.setProperty('--currentFloor', "".concat(this.elevators[i].currentFloor));
             elevatorsRowElement.appendChild(elevatorElement);
         }
@@ -54,19 +53,19 @@ var Building = /** @class */ (function () {
             var time = 0;
             // Calculate time to travel between all consecutive floors
             for (var i = 0; i < elevator.destinationFloors.length - 1; i++) {
-                var currentFloor = elevator.destinationFloors[i];
-                var nextFloor = elevator.destinationFloors[i + 1];
+                var currentFloor = elevator.destinationFloors[i].number;
+                var nextFloor = elevator.destinationFloors[i + 1].number;
                 time += Math.abs(currentFloor - nextFloor);
             }
             // Calculate time to travel from the last destination floor to the calling floor
             var lastFloor = void 0;
             if (elevator.destinationFloors.length > 0) {
-                lastFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1];
+                lastFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1].number;
             }
             else {
                 lastFloor = elevator.currentFloor; // If destinationFloors is empty, set lastFloor to currentFloor
             }
-            time += Math.abs(lastFloor - callingFloor);
+            time += Math.abs(lastFloor - callingFloor.number);
             // Calculate total all breaks time
             var totalBreaks = elevator.destinationFloors.length * 2;
             time += totalBreaks;
@@ -76,8 +75,8 @@ var Building = /** @class */ (function () {
             }
         }
         // Create and start the timer
-        var timer = new Timer(callingFloor, minTime - 2);
-        timer.startTimer();
+        var timer = callingFloor.timer;
+        timer.startTimer(minTime);
         return nearestElevator;
     };
     return Building;
@@ -86,35 +85,37 @@ var Floor = /** @class */ (function () {
     function Floor(number) {
         this.number = number;
         this.callButton = new CallButton(this);
+        this.timer = new Timer(this);
     }
     // Function to change the color of the button text when clicked
-    Floor.prototype.changeColor = function (button) {
+    Floor.prototype.changeColor = function () {
+        var button = this.callButton.button;
         if (button.style.color === 'green') {
             button.style.color = 'hsla(0, 0%, 15%, 0.8)';
         }
         else {
-            button.style.color = 'green'; // Change text color to green
+            button.style.color = 'green';
         }
     };
     Floor.prototype.playArrivalSound = function () {
         var audio = new Audio('ding.mp3');
         audio.play();
     };
-    Floor.prototype.callElevator = function (floor) {
-        var elevator = building.findNearestElevator(floor);
-        if (this.anElevatorOnFloor(floor)) {
-            console.log("An elevator is already present on floor ".concat(floor, "."));
+    Floor.prototype.callElevator = function () {
+        var elevator = building.findNearestElevator(this);
+        if (this.anElevatorOnFloor()) {
+            console.log("An elevator is already present on floor ".concat(this.number, "."));
         }
         else {
-            this.changeColor(this.callButton.button);
-            elevator.call(floor);
-            console.log("Elevator ".concat(elevator.number, " called to floor ").concat(floor));
+            this.changeColor();
+            elevator.call(this);
+            console.log("Elevator ".concat(elevator.number, " called to floor ").concat(this.number));
         }
     };
-    Floor.prototype.anElevatorOnFloor = function (floor) {
+    Floor.prototype.anElevatorOnFloor = function () {
         for (var _i = 0, _a = building.elevators; _i < _a.length; _i++) {
             var elevator = _a[_i];
-            if (elevator.currentFloor === floor) {
+            if (elevator.currentFloor === this.number) {
                 return true;
             }
         }
@@ -131,7 +132,7 @@ var CallButton = /** @class */ (function () {
         var button = document.createElement("button");
         button.innerText = "".concat(this.number);
         button.onclick = function () {
-            floor.callElevator(floor.number);
+            floor.callElevator();
         };
         button.classList.add("metal", "linear");
         return button;
@@ -157,50 +158,57 @@ var elevatorFactory = /** @class */ (function () {
 var Elevator = /** @class */ (function () {
     function Elevator(number) {
         this.number = number;
-        this.currentFloor = 0;
+        this.currentFloor = 7;
         this.destinationFloors = [];
+        this.elevatorImg = this.createElevatorImg();
     }
     Elevator.prototype.call = function (floor) {
         this.destinationFloors.push(floor);
-        this.moveLock();
+        this.move();
     };
-    Elevator.prototype.updateElevatorPosition = function () {
-        var elevatorElement = document.getElementById("elevator-".concat(this.number));
-        if (elevatorElement) {
-            var floorHeight = 47;
-            var topPosition = floorHeight * this.currentFloor;
-            elevatorElement.style.top = "".concat(topPosition, "px");
-        }
+    Elevator.prototype.createElevatorImg = function () {
+        var elevatorElement = document.createElement("img");
+        elevatorElement.classList.add("elevator-img");
+        elevatorElement.src = 'elv.png';
+        elevatorElement.id = "elevator-".concat(this.number);
+        return elevatorElement;
     };
-    Elevator.prototype.moveLock = function () {
+    Elevator.prototype.move = function () {
         var _this = this;
         if (this.destinationFloors.length > 0) {
-            var nextFloor = this.getNextFloor();
-            if (nextFloor === this.currentFloor) {
-                console.log("Elevator is already at the destination floor.");
+            var nextFloor = this.getNextFloor().number;
+            if (this.currentFloor === nextFloor) {
+                console.log("Elevator ".concat(this.number, " arrived at floor ").concat(this.currentFloor));
+                // this.destinationFloors.shift();
+                // this.handleArrival();
+                // this.move();
                 return;
             }
             var floorsToMove = Math.abs(this.currentFloor - nextFloor);
-            var transitionDuration = 0.5;
+            var transitionDuration = 0.5 * floorsToMove;
+            var elevatorElement = this.elevatorImg;
+            elevatorElement.style.transition = "top ".concat(transitionDuration, "s ease");
             this.currentFloor = nextFloor;
             this.updateElevatorPosition();
-            console.log("Elevator ".concat(this.number, " arrived at floor ").concat(this.currentFloor));
-            var elevatorElement = document.getElementById("elevator-".concat(this.number));
-            elevatorElement.style.transition = "top ".concat(floorsToMove * transitionDuration, "s ease");
+            console.log("Elevator ".concat(this.number, " moving to floor ").concat(this.currentFloor));
             setTimeout(function () {
                 _this.destinationFloors.shift();
-                _this.moveLock();
-            }, (floorsToMove * transitionDuration * 1000));
-            setTimeout(function () {
                 _this.handleArrival();
-            }, 2000);
+                _this.move();
+            }, transitionDuration * 1000);
         }
+    };
+    Elevator.prototype.updateElevatorPosition = function () {
+        var elevatorElement = this.elevatorImg;
+        var floorHeight = 47;
+        var topPosition = floorHeight * this.currentFloor;
+        elevatorElement.style.top = "".concat(topPosition, "px");
     };
     Elevator.prototype.handleArrival = function () {
         var currentFloor = this.currentFloor;
         var floor = building.floors[currentFloor];
         if (floor) {
-            floor.changeColor(floor.callButton.button);
+            floor.changeColor();
             floor.playArrivalSound();
         }
     };
@@ -213,8 +221,7 @@ var lowerElevator = /** @class */ (function (_super) {
     __extends(lowerElevator, _super);
     function lowerElevator(number) {
         var _this = _super.call(this, number) || this;
-        _this.defaultPosition = 0;
-        _this.currentFloor = _this.defaultPosition;
+        _this.currentFloor = 0;
         return _this;
     }
     return lowerElevator;
@@ -223,8 +230,7 @@ var upperElevator = /** @class */ (function (_super) {
     __extends(upperElevator, _super);
     function upperElevator(number, numFloors) {
         var _this = _super.call(this, number) || this;
-        _this.defaultPosition = numFloors - 1;
-        _this.currentFloor = _this.defaultPosition;
+        _this.currentFloor = numFloors - 1;
         return _this;
     }
     return upperElevator;
@@ -233,33 +239,40 @@ var middleElevator = /** @class */ (function (_super) {
     __extends(middleElevator, _super);
     function middleElevator(number, numFloors) {
         var _this = _super.call(this, number) || this;
-        _this.defaultPosition = Math.floor((numFloors - 1) / 2);
-        _this.currentFloor = _this.defaultPosition;
+        _this.currentFloor = Math.floor((numFloors - 1) / 2);
         return _this;
     }
     return middleElevator;
 }(Elevator));
 var Timer = /** @class */ (function () {
-    function Timer(floor, remainingTime) {
-        this.floor = floor;
-        this.remainingTime = remainingTime;
-        this.timerElement = document.createElement('div');
-        this.timerElement.id = "timer-".concat(floor);
-        this.timerElement.classList.add('timer');
-        document.body.appendChild(this.timerElement);
+    function Timer(floor) {
+        this.number = floor.number;
+        this.remainingTime = null;
+        this.timerElement = this.createTimer(floor);
     }
-    Timer.prototype.startTimer = function () {
+    Timer.prototype.createTimer = function (floor) {
+        var timerElement = document.createElement('div');
+        timerElement.id = "timer-".concat(floor.number);
+        timerElement.classList.add('timer');
+        timerElement.style.display = 'none';
+        return timerElement;
+    };
+    Timer.prototype.startTimer = function (remainingTime) {
         var _this = this;
-        var interval = setInterval(function () {
-            if (_this.remainingTime <= 0) {
-                clearInterval(interval);
-                _this.timerElement.innerText = 'Elevator arrived';
-            }
-            else {
-                _this.timerElement.innerText = "Time remaining: ".concat(_this.remainingTime, " seconds");
-                _this.remainingTime--;
-            }
-        }, 1000);
+        if (remainingTime > 0) {
+            this.remainingTime = remainingTime;
+            this.timerElement.style.display = 'block';
+            var interval_1 = setInterval(function () {
+                if (_this.remainingTime === null || _this.remainingTime <= 0) {
+                    clearInterval(interval_1);
+                    _this.timerElement.style.display = 'none';
+                }
+                else {
+                    _this.timerElement.innerText = "".concat(_this.remainingTime);
+                    _this.remainingTime--;
+                }
+            }, 1000);
+        }
     };
     return Timer;
 }());
