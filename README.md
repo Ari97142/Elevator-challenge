@@ -20,6 +20,9 @@ Controls the behavior and movement of each elevator, including current position,
 The system efficiently finds the nearest elevator to a calling floor using the following algorithm:
 
 Initialization: When a floor calls an elevator, the system calculates the estimated time for each available elevator to reach the floor.
+
 Calculation: For each elevator, the system considers the current floor of the elevator and any destinations it currently has. It calculates the travel time based on the remaining time of the last destination and the distance to the calling floor.
+
 Selection: The system selects the elevator with the shortest calculated time as the nearest one to respond to the call.
+
 Timer Start: Upon selecting the nearest elevator, the system starts a timer to simulate the arrival time.
