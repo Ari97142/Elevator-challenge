@@ -1,66 +1,25 @@
-# Elevator-challenge
- The project features an elevator control system for efficient movement within buildings. It enables floor-specific elevator calls, utilizes advanced algorithms to optimize elevator allocation, and offers configuration options for elevator placement. The objective is to reduce wait times and enhance overall elevator performance.
+# Building and Elevator Simulation Project
 
+## Description
+This project simulates a building with multiple floors and elevators using JavaScript/TypeScript. It includes classes for managing buildings, floors, and elevators, allowing simulation and control of elevator movements and interactions.
 
-Sure, here's a detailed specification document for the code, including an explanation of the elevator's nearest algorithm:
+## Classes
 
----
+### Building
+Manages the overall structure and properties of a building, including the number of floors and elevators.
 
-# Code Specification Document
+### Floor
+Represents each floor in the building, handling properties such as floor number and interactions with elevators.
 
-## Overview:
+### Elevator
+Controls the behavior and movement of each elevator, including current position, and serving floor requests.
 
-The provided code simulates a building with multiple floors and elevators. It allows users to call an elevator from any floor and simulates the movement of the elevator to fulfill the request.
+## Elevator Algorithm Description
 
-## Classes:
+### SCAN Algorithm
+The system efficiently finds the nearest elevator to a calling floor using the following algorithm:
 
-1. **Building**:
-   - Attributes:
-     - `numFloors`: Number of floors in the building.
-     - `numElevators`: Number of elevators in the building.
-     - `floors`: Array containing instances of the `Floor` class.
-     - `elevators`: Array containing instances of the `Elevator` class.
-   - Methods:
-     - `constructor(numFloors, numElevators)`: Initializes the building with the specified number of floors and elevators.
-     - `displayBuilding()`: Displays the building by creating floor elements with call buttons for each floor.
-     - `findNearestElevator(floor)`: Finds the nearest elevator to a specified floor using the nearest algorithm.
-
-2. **Floor**:
-   - Attributes:
-     - `number`: Floor number.
-     - `callButton`: Instance of the `CallButton` class.
-   - Methods:
-     - `constructor(number)`: Initializes the floor with a specified number.
-     - `callElevator(floor)`: Calls the nearest elevator to the specified floor.
-
-3. **Elevator** (Abstract class):
-   - Attributes:
-     - `number`: Elevator number.
-     - `currentFloor`: Current floor of the elevator.
-     - `destinationFloors`: Array containing the destination floors of the elevator.
-     - `defaultPosition`: Default position of the elevator.
-   - Methods:
-     - `call(floor)`: Abstract method to call the elevator to a specified floor.
-     - `moveLock()`: Controls the movement of the elevator based on its destination floors.
-     - `getNextFloor()`: Abstract method to determine the next floor the elevator should move to.
-
-4. **LowerElevator**, **MiddleElevator**, **UpperElevator** (Concrete subclasses of Elevator):
-   - Methods:
-     - `call(floor)`: Adds the specified floor to the destination floors of the elevator.
-     - `getNextFloor()`: Retrieves the next floor from the destination floors array.
-
-5. **CallButton**:
-   - Attributes:
-     - `color`: Color of the call button (normal state).
-   - Methods:
-     - `constructor()`: Initializes the call button with a normal color.
-
-## Nearest Elevator Algorithm:
-
-The `findNearestElevator(floor)` method in the `Building` class implements the algorithm to find the nearest elevator to a specified floor:
-1. It calculates the total breaks (stops) required for each elevator based on its destination floors.
-2. For each elevator, it calculates the total distance (in floors) from its current position to the specified floor, including the breaks.
-3. It selects the elevator with the minimum total distance as the nearest one.
-
----
-
+Initialization: When a floor calls an elevator, the system calculates the estimated time for each available elevator to reach the floor.
+Calculation: For each elevator, the system considers the current floor of the elevator and any destinations it currently has. It calculates the travel time based on the remaining time of the last destination and the distance to the calling floor.
+Selection: The system selects the elevator with the shortest calculated time as the nearest one to respond to the call.
+Timer Start: Upon selecting the nearest elevator, the system starts a timer to simulate the arrival time.

@@ -13,15 +13,52 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var SystemManager = /** @class */ (function () {
+    function SystemManager() {
+        this.buildingManager = new BuildingManager();
+    }
+    SystemManager.prototype.initialize = function () {
+        var addBuildingBtn = document.getElementById('add-building-btn');
+        addBuildingBtn === null || addBuildingBtn === void 0 ? void 0 : addBuildingBtn.addEventListener('click', this.buildingManager.promptForBuildingDetails.bind(this.buildingManager));
+        this.buildingManager.addBuilding(15, 3);
+    };
+    return SystemManager;
+}());
+var BuildingManager = /** @class */ (function () {
+    function BuildingManager() {
+        this.buildings = [];
+    }
+    BuildingManager.prototype.promptForBuildingDetails = function () {
+        var numFloors = parseInt(prompt('Enter number of floors:') || '0');
+        var numElevators = parseInt(prompt('Enter number of elevators:') || '0');
+        if (numFloors > 0 && numElevators > 0) {
+            this.addBuilding(numFloors, numElevators);
+        }
+        else {
+            alert('Invalid input. Please enter positive integers.');
+        }
+    };
+    BuildingManager.prototype.addBuilding = function (numFloors, numElevators) {
+        var building = new Building(numFloors, numElevators);
+        this.buildings.push(building);
+        var buildingContainer = document.getElementById('building-container');
+        if (buildingContainer) {
+            building.displayBuilding(buildingContainer);
+        }
+    };
+    return BuildingManager;
+}());
 var Building = /** @class */ (function () {
     function Building(numFloors, numElevators) {
+        var _this = this;
         this.numFloors = numFloors;
         this.numElevators = numElevators;
-        this.floors = Array.from({ length: numFloors }, function (_, i) { return new Floor(i); });
-        this.elevators = Array.from({ length: numElevators }, function (_, i) { return elevatorFactory.createElevator(i, numFloors); });
+        this.floors = Array.from({ length: numFloors }, function (_, i) { return new Floor(i, _this); });
+        this.elevators = Array.from({ length: numElevators }, function (_, i) { return elevatorFactory.createElevator(i, numFloors, _this); });
     }
-    Building.prototype.displayBuilding = function () {
-        var buildingElement = document.getElementById("building");
+    Building.prototype.displayBuilding = function (container) {
+        var buildingElement = document.createElement("div");
+        buildingElement.classList.add("building");
         buildingElement.style.setProperty('--numElevators', "".concat(this.numElevators));
         var elevatorsRowElement = document.createElement("div");
         elevatorsRowElement.classList.add("elevators-row");
@@ -44,50 +81,46 @@ var Building = /** @class */ (function () {
             elevatorElement.style.setProperty('--currentFloor', "".concat(this.elevators[i].currentFloor));
             elevatorsRowElement.appendChild(elevatorElement);
         }
+        container.appendChild(buildingElement);
     };
     Building.prototype.findNearestElevator = function (callingFloor) {
         var minTime = Infinity;
-        var nearestElevator = this.elevators[2];
+        var nearestElevator = this.elevators[0];
         for (var _i = 0, _a = this.elevators; _i < _a.length; _i++) {
             var elevator = _a[_i];
-            var time = 0;
-            // Calculate time to travel between all consecutive floors
-            for (var i = 0; i < elevator.destinationFloors.length - 1; i++) {
-                var currentFloor = elevator.destinationFloors[i].number;
-                var nextFloor = elevator.destinationFloors[i + 1].number;
-                time += Math.abs(currentFloor - nextFloor);
-            }
-            // Calculate time to travel from the last destination floor to the calling floor
-            var lastFloor = void 0;
-            if (elevator.destinationFloors.length > 0) {
-                lastFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1].number;
-            }
-            else {
-                lastFloor = elevator.currentFloor; // If destinationFloors is empty, set lastFloor to currentFloor
-            }
-            time += Math.abs(lastFloor - callingFloor.number);
-            // Calculate total all breaks time
-            var totalBreaks = elevator.destinationFloors.length * 2;
-            time += totalBreaks;
+            var time = this.calculateTravelTime(elevator, callingFloor);
             if (time < minTime) {
                 minTime = time;
                 nearestElevator = elevator;
             }
         }
-        // Create and start the timer
         var timer = callingFloor.timer;
         timer.startTimer(minTime);
         return nearestElevator;
     };
+    Building.prototype.calculateTravelTime = function (elevator, callingFloor) {
+        var _a;
+        var time = 0;
+        if (elevator.destinationFloors.length > 0) {
+            var lastDestinationFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1];
+            var remainingTimeOnTimer = (_a = lastDestinationFloor.timer.remainingTime) !== null && _a !== void 0 ? _a : 0;
+            time += remainingTimeOnTimer + 2;
+            time += Math.abs(lastDestinationFloor.number - callingFloor.number) * 0.5;
+        }
+        else {
+            time += Math.abs(elevator.currentFloor - callingFloor.number) * 0.5;
+        }
+        return time;
+    };
     return Building;
 }());
 var Floor = /** @class */ (function () {
-    function Floor(number) {
+    function Floor(number, building) {
         this.number = number;
         this.callButton = new CallButton(this);
         this.timer = new Timer(this);
+        this.building = building;
     }
-    // Function to change the color of the button text when clicked
     Floor.prototype.changeColor = function () {
         var button = this.callButton.button;
         if (button.style.color === 'green') {
@@ -102,9 +135,9 @@ var Floor = /** @class */ (function () {
         audio.play();
     };
     Floor.prototype.callElevator = function () {
-        var elevator = building.findNearestElevator(this);
-        if (this.anElevatorOnFloor()) {
-            console.log("An elevator is already present on floor ".concat(this.number, "."));
+        var elevator = this.building.findNearestElevator(this);
+        if (this.anElevatorOnFloor() || this.anElevatorEnRoute()) {
+            console.log("An elevator is already present or en route to floor ".concat(this.number, "."));
         }
         else {
             this.changeColor();
@@ -113,10 +146,22 @@ var Floor = /** @class */ (function () {
         }
     };
     Floor.prototype.anElevatorOnFloor = function () {
-        for (var _i = 0, _a = building.elevators; _i < _a.length; _i++) {
+        for (var _i = 0, _a = this.building.elevators; _i < _a.length; _i++) {
             var elevator = _a[_i];
             if (elevator.currentFloor === this.number) {
                 return true;
+            }
+        }
+        return false;
+    };
+    Floor.prototype.anElevatorEnRoute = function () {
+        for (var _i = 0, _a = this.building.elevators; _i < _a.length; _i++) {
+            var elevator = _a[_i];
+            for (var _b = 0, _c = elevator.destinationFloors; _b < _c.length; _b++) {
+                var floor = _c[_b];
+                if (floor.number === this.number) {
+                    return true;
+                }
             }
         }
         return false;
@@ -142,25 +187,26 @@ var CallButton = /** @class */ (function () {
 var elevatorFactory = /** @class */ (function () {
     function elevatorFactory() {
     }
-    elevatorFactory.createElevator = function (i, numFloors) {
+    elevatorFactory.createElevator = function (i, numFloors, building) {
         if (i % 3 === 0) {
-            return new lowerElevator(i);
+            return new lowerElevator(i, building);
         }
         else if (i % 3 === 1) {
-            return new middleElevator(i, numFloors);
+            return new middleElevator(i, numFloors, building);
         }
         else {
-            return new upperElevator(i, numFloors);
+            return new upperElevator(i, numFloors, building);
         }
     };
     return elevatorFactory;
 }());
 var Elevator = /** @class */ (function () {
-    function Elevator(number) {
+    function Elevator(number, building) {
         this.number = number;
         this.currentFloor = 7;
         this.destinationFloors = [];
         this.elevatorImg = this.createElevatorImg();
+        this.building = building;
     }
     Elevator.prototype.call = function (floor) {
         this.destinationFloors.push(floor);
@@ -179,9 +225,6 @@ var Elevator = /** @class */ (function () {
             var nextFloor = this.getNextFloor().number;
             if (this.currentFloor === nextFloor) {
                 console.log("Elevator ".concat(this.number, " arrived at floor ").concat(this.currentFloor));
-                // this.destinationFloors.shift();
-                // this.handleArrival();
-                // this.move();
                 return;
             }
             var floorsToMove = Math.abs(this.currentFloor - nextFloor);
@@ -192,21 +235,24 @@ var Elevator = /** @class */ (function () {
             this.updateElevatorPosition();
             console.log("Elevator ".concat(this.number, " moving to floor ").concat(this.currentFloor));
             setTimeout(function () {
-                _this.destinationFloors.shift();
                 _this.handleArrival();
-                _this.move();
+                setTimeout(function () {
+                    _this.destinationFloors.shift();
+                    _this.move();
+                }, 2000);
             }, transitionDuration * 1000);
         }
     };
     Elevator.prototype.updateElevatorPosition = function () {
         var elevatorElement = this.elevatorImg;
-        var floorHeight = 47;
-        var topPosition = floorHeight * this.currentFloor;
+        var floorHeight = 47; // Height of each floor in pixels
+        // const numFloors = this.building.numFloors; // Total number of floors
+        var topPosition = floorHeight * (this.currentFloor); // Calculate the correct top position
         elevatorElement.style.top = "".concat(topPosition, "px");
     };
     Elevator.prototype.handleArrival = function () {
         var currentFloor = this.currentFloor;
-        var floor = building.floors[currentFloor];
+        var floor = this.building.floors[currentFloor];
         if (floor) {
             floor.changeColor();
             floor.playArrivalSound();
@@ -219,8 +265,8 @@ var Elevator = /** @class */ (function () {
 }());
 var lowerElevator = /** @class */ (function (_super) {
     __extends(lowerElevator, _super);
-    function lowerElevator(number) {
-        var _this = _super.call(this, number) || this;
+    function lowerElevator(number, building) {
+        var _this = _super.call(this, number, building) || this;
         _this.currentFloor = 0;
         return _this;
     }
@@ -228,8 +274,8 @@ var lowerElevator = /** @class */ (function (_super) {
 }(Elevator));
 var upperElevator = /** @class */ (function (_super) {
     __extends(upperElevator, _super);
-    function upperElevator(number, numFloors) {
-        var _this = _super.call(this, number) || this;
+    function upperElevator(number, numFloors, building) {
+        var _this = _super.call(this, number, building) || this;
         _this.currentFloor = numFloors - 1;
         return _this;
     }
@@ -237,8 +283,8 @@ var upperElevator = /** @class */ (function (_super) {
 }(Elevator));
 var middleElevator = /** @class */ (function (_super) {
     __extends(middleElevator, _super);
-    function middleElevator(number, numFloors) {
-        var _this = _super.call(this, number) || this;
+    function middleElevator(number, numFloors, building) {
+        var _this = _super.call(this, number, building) || this;
         _this.currentFloor = Math.floor((numFloors - 1) / 2);
         return _this;
     }
@@ -262,19 +308,20 @@ var Timer = /** @class */ (function () {
         if (remainingTime > 0) {
             this.remainingTime = remainingTime;
             this.timerElement.style.display = 'block';
+            this.timerElement.innerText = "".concat(Math.floor(this.remainingTime));
             var interval_1 = setInterval(function () {
                 if (_this.remainingTime === null || _this.remainingTime <= 0) {
                     clearInterval(interval_1);
                     _this.timerElement.style.display = 'none';
                 }
                 else {
-                    _this.timerElement.innerText = "".concat(_this.remainingTime);
-                    _this.remainingTime--;
+                    _this.remainingTime -= 0.5;
+                    _this.timerElement.innerText = "".concat(Math.floor(_this.remainingTime));
                 }
-            }, 1000);
+            }, 500);
         }
     };
     return Timer;
 }());
-var building = new Building(15, 3);
-building.displayBuilding();
+var systemManager = new SystemManager();
+systemManager.initialize();
