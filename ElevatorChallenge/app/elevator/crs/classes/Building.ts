@@ -1,4 +1,7 @@
-class Building {
+import {Floor} from './Floor';
+import {Elevator, elevatorFactory} from './Elevator';
+
+export class Building {
     numFloors: number;
     numElevators: number;
     floors: Floor[];
@@ -82,3 +85,4 @@ class Building {
 }
 
 }
+

@@ -1,4 +1,6 @@
-class Timer {
+import {Floor} from './Floor';
+
+export class Timer {
     number: number;
     remainingTime: number | null;
     timerElement: HTMLElement;

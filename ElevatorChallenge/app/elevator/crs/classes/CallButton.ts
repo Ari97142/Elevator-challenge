@@ -1,4 +1,6 @@
-class CallButton {
+import {Floor} from './Floor'
+
+export class CallButton {
     number: number;
     button: HTMLButtonElement;
 

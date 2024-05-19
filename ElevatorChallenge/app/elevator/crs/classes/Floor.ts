@@ -1,5 +1,9 @@
+import {CallButton} from './CallButton';
+import {Timer} from './Timer';
+import {Building} from './Building';
 
-class Floor {
+
+export class Floor {
     number: number;
     callButton: CallButton;
     timer: Timer;
@@ -22,8 +26,8 @@ class Floor {
     }
 
     playArrivalSound() {
-        const audio = new Audio('ding.mp3');
-        audio.play();
+        // const audio = new Audio('ding.mp3');
+        // audio.play();
     }
 
     callElevator() {

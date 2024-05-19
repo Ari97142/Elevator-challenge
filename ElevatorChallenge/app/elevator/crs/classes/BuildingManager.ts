@@ -1,4 +1,6 @@
-class BuildingManager {
+import {Building} from './Building';
+
+export class BuildingManager {
     buildings: Building[] = [];
 
     promptForBuildingDetails() {

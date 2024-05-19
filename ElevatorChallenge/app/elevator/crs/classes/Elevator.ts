@@ -1,5 +1,8 @@
+import {Building} from './Building';
+import {Floor} from './Floor';
 
-class elevatorFactory {
+
+export class elevatorFactory {
     static createElevator(i: number, numFloors: number, building: Building) {
         if (i % 3 === 0) {
             return new lowerElevator(i, building);
@@ -11,7 +14,7 @@ class elevatorFactory {
     }
 }
 
-abstract class Elevator {
+export abstract class Elevator {
     number: number;
     currentFloor: number;
     destinationFloors: Floor[];
