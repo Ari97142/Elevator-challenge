@@ -139,6 +139,8 @@ private calculateTravelTime(elevator: Elevator, callingFloor: Floor): number {
     return time;
 }
 
+}
+
 
 class Floor {
     number: number;

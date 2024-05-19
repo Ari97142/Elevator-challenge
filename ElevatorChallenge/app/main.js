@@ -83,33 +83,53 @@ var Building = /** @class */ (function () {
         }
         container.appendChild(buildingElement);
     };
+    /**
+     * Finds the nearest elevator to the calling floor based on travel time and starts a timer for the elevator's arrival.
+     * @param callingFloor The floor from which the elevator is called.
+     * @returns The nearest elevator to the calling floor.
+     */
     Building.prototype.findNearestElevator = function (callingFloor) {
+        // Initialize variables to track minimum time and the nearest elevator
         var minTime = Infinity;
         var nearestElevator = this.elevators[0];
+        // Iterate through each elevator to calculate the travel time
         for (var _i = 0, _a = this.elevators; _i < _a.length; _i++) {
             var elevator = _a[_i];
             var time = this.calculateTravelTime(elevator, callingFloor);
+            // Update minimum time and nearest elevator if a closer elevator is found
             if (time < minTime) {
                 minTime = time;
                 nearestElevator = elevator;
             }
         }
+        // Start the timer on the calling floor for the nearest elevator's arrival
         var timer = callingFloor.timer;
         timer.startTimer(minTime);
+        // Return the nearest elevator
         return nearestElevator;
     };
+    /**
+     * Calculates the travel time for an elevator to reach a calling floor based on its current state and destination floors.
+     * @param elevator The elevator for which to calculate the travel time.
+     * @param callingFloor The floor from which the elevator is called.
+     * @returns The estimated travel time in seconds.
+     */
     Building.prototype.calculateTravelTime = function (elevator, callingFloor) {
         var _a;
         var time = 0;
+        // Check if the elevator has any destination floors
         if (elevator.destinationFloors.length > 0) {
+            // If there are destination floors, calculate time including remaining time and distance to the calling floor
             var lastDestinationFloor = elevator.destinationFloors[elevator.destinationFloors.length - 1];
             var remainingTimeOnTimer = (_a = lastDestinationFloor.timer.remainingTime) !== null && _a !== void 0 ? _a : 0;
-            time += remainingTimeOnTimer + 2;
-            time += Math.abs(lastDestinationFloor.number - callingFloor.number) * 0.5;
+            time += remainingTimeOnTimer + 2; // 2 seconds buffer for processing
+            time += Math.abs(lastDestinationFloor.number - callingFloor.number) * 0.5; // Estimated time based on floor difference
         }
         else {
-            time += Math.abs(elevator.currentFloor - callingFloor.number) * 0.5;
+            // If no destination floors, calculate time based on current floor to the calling floor
+            time += Math.abs(elevator.currentFloor - callingFloor.number) * 0.5; // Estimated time based on floor difference
         }
+        // Return the calculated travel time
         return time;
     };
     return Building;
@@ -219,21 +239,33 @@ var Elevator = /** @class */ (function () {
         elevatorElement.id = "elevator-".concat(this.number);
         return elevatorElement;
     };
+    /**
+  * Moves the elevator to the next destination floor if there are pending destinations.
+  * If the elevator is already at the next floor, it logs the arrival message and returns.
+  * It sets the transition duration for the elevator movement based on the floors to move.
+  * Updates the elevator's current floor and position after reaching the next floor.
+  * After completing the movement, it schedules the handling of arrival and shifts the
+  * first destination floor from the queue after a delay.
+  */
     Elevator.prototype.move = function () {
         var _this = this;
         if (this.destinationFloors.length > 0) {
             var nextFloor = this.getNextFloor().number;
+            // Check if the elevator is already at the next destination floor
             if (this.currentFloor === nextFloor) {
                 console.log("Elevator ".concat(this.number, " arrived at floor ").concat(this.currentFloor));
                 return;
             }
+            // Calculate the number of floors to move and set transition duration
             var floorsToMove = Math.abs(this.currentFloor - nextFloor);
             var transitionDuration = 0.5 * floorsToMove;
+            // Update elevator element with transition style and move to next floor
             var elevatorElement = this.elevatorImg;
             elevatorElement.style.transition = "top ".concat(transitionDuration, "s ease");
             this.currentFloor = nextFloor;
             this.updateElevatorPosition();
             console.log("Elevator ".concat(this.number, " moving to floor ").concat(this.currentFloor));
+            // Schedule handling of arrival and shifting of next destination floor after a delay
             setTimeout(function () {
                 _this.handleArrival();
                 setTimeout(function () {
